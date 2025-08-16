@@ -1,10 +1,18 @@
 "use client"
 
 import { PropertyCard } from "./property-card"
-import type { Property, PropertyImage } from "@prisma/client"
 
-interface PropertyWithDetails extends Property {
-  images: PropertyImage[]
+interface PropertyWithDetails {
+  id: string
+  title: string
+  description: string
+  price: number
+  bedrooms: number
+  bathrooms: number
+  area: number
+  city: string
+  address: string
+  images: { url: string }[]
   landlord: {
     name: string | null
     email: string
@@ -12,6 +20,8 @@ interface PropertyWithDetails extends Property {
   _count: {
     reviews: number
   }
+  isAvailable: boolean
+  createdAt: Date
 }
 
 interface PropertyGridProps {
