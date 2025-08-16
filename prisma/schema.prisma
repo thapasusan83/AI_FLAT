@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?  @map("password_hash")
+  role         Role     @default(TENANT)
+  image        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  properties Property[]
+  bookings   Booking[]
+  reviews    Review[]
+  accounts   Account[]
+  sessions   Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Property {
+  id            String   @id @default(cuid())
+  landlordId    String   @map("landlord_id")
+  title         String
+  description   String   @db.Text
+  address       String
+  city          String
+  postalCode    String   @map("postal_code")
+  rent          Decimal  @db.Decimal(10, 2)
+  bedrooms      Int      @default(1)
+  bathrooms     Int      @default(1)
+  availableFrom DateTime @map("available_from")
+  isAvailable   Boolean  @default(true) @map("is_available")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  landlord User            @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  images   PropertyImage[]
+  bookings Booking[]
+  reviews  Review[]
+
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String @id @default(cuid())
+  propertyId String @map("property_id")
+  imageUrl   String @map("image_url")
+  isPrimary  Boolean @default(false) @map("is_primary")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_images")
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  propertyId  String        @map("property_id")
+  tenantId    String        @map("tenant_id")
+  status      BookingStatus @default(PENDING)
+  startDate   DateTime      @map("start_date")
+  endDate     DateTime      @map("end_date")
+  totalAmount Decimal       @db.Decimal(10, 2) @map("total_amount")
+  message     String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant   User     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  propertyId String   @map("property_id")
+  tenantId   String   @map("tenant_id")
+  rating     Int      @db.TinyInt
+  reviewText String?  @map("review_text") @db.Text
+  isApproved Boolean  @default(false) @map("is_approved")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant   User     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+enum Role {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
